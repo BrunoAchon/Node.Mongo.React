@@ -232,7 +232,7 @@ module.exports = class PetController {
         res.status(200).json({ message: "Pet atualizaco com sucesso!" });
     }
 
-    static async schedule(req, res) {
+    static async schedule(req, res) { // agendamento
         const id = req.params.id;
 
         // check if id is valid
@@ -278,5 +278,39 @@ module.exports = class PetController {
 
         await Pet.findByIdAndUpdate(id, pet);
         res.status(200).json({ message: `A visita foi agendada! Contate ${pet.user.name} pelo telefone ${pet.user.phone}.` });
+    }
+
+    static async concludeAdoption(req,res){
+        const id = req.params.id
+        
+        // check if id is valid
+        if (!ObjectId.isValid(id)) {
+            res.status(422).json({ message: "ID inválido!" });
+            return;
+        }
+
+        const pet = await Pet.findOne({ _id: id });
+        //check if pet exists
+        if (!pet) {
+            res.status(404).json({ message: "Pet não encontrado!" });
+            return;
+        }
+    
+        // chect if logged user registered the pet
+        const token = getToken(req);
+        const user = await getUserByToken(token);
+
+        if (pet.user._id.toString() !== user._id.toString()) {
+            res.status(422).json({
+                message:
+                    "Houve um problema em processar sua solicitação, tente novamente mais tarde!",
+            });
+            return;
+        }
+
+        pet.available = false
+        await Pet.findByIdAndUpdate(id, pet)
+        res.status(200).json({ message: "Parabens! O ciclo de adoção foi finalizado com sucesso!"})
+
     }
 };
